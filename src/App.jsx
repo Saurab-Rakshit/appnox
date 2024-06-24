@@ -1,112 +1,65 @@
-import React, { useState,useEffect } from 'react';
-import {
-  AppstoreOutlined,
-  ContainerOutlined,
-  DesktopOutlined,
-  MailOutlined,
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
+import { Menu, Button } from 'antd';
+import {  
   MenuFoldOutlined,
   MenuUnfoldOutlined,
-  PieChartOutlined,
 } from '@ant-design/icons';
-import { Button, Menu } from 'antd';
-import axios from 'axios';
-
-
-const items = [
-  {
-    key: '1',
-    icon: <PieChartOutlined />,
-    label: 'Option 1',
-  },
-  {
-    key: '2',
-    icon: <DesktopOutlined />,
-    label: 'Option 2',
-  },
-  {
-    key: '3',
-    icon: <ContainerOutlined />,
-    label: 'Option 3',
-  },
-  {
-    key: 'sub1',
-    label: 'Navigation One',
-    icon: <MailOutlined />,
-    children: [
-      {
-        key: '5',
-        label: 'Option 5',
-      },
-      {
-        key: '6',
-        label: 'Option 6',
-      },
-      {
-        key: '7',
-        label: 'Option 7',
-      },
-      {
-        key: '8',
-        label: 'Option 8',
-      },
-    ],
-  },
-  {
-    key: 'sub2',
-    label: 'Navigation Two',
-    icon: <AppstoreOutlined />,
-    children: [
-      {
-        key: '9',
-        label: 'Option 9',
-      },
-      {
-        key: '10',
-        label: 'Option 10',
-      },
-      {
-        key: 'sub3',
-        label: 'Submenu',
-        children: [
-          {
-            key: '11',
-            label: 'Option 11',
-          },
-          {
-            key: '12',
-            label: 'Option 12',
-          },
-        ],
-      },
-    ],
-  },
-];
 
 const App = () => {
-
-  useEffect(()=>{
-    // axios.post(`http://appnox-tm.it/api/login`,{"user": "AdminPro","password": "Mnop@1234"}).then((resp)=>{
-    //   console.log("Response:-",resp.data);
-    // }).catch((error)=>{
-    //   console.log("Request Error:-",error);
-    // })
-    // https://github.com/Saurab-Rakshit/appnox.git
-      
-    axios.get(`http://appnox-tm.it/api/v1/menu/tree`).then((resp)=>{
-      console.log("Response:-",resp.data);
-    }).catch((error)=>{
-      console.log("Request Error:-",error);
-    })
-
-  },[])
-
-  
-
+  const [menuData, setMenuData] = useState([]);
   const [collapsed, setCollapsed] = useState(false);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const loginResp = await axios.post('http://appnox-tm.it/api/login', {
+          user: 'AdminPro',
+          password: 'Mnop@1234',
+        });
+
+        const accessToken = loginResp.data.result.key;
+        console.log('accessToken:', accessToken);
+
+        const menuTreeResponse = await axios.get('http://appnox-tm.it/api/v1/menu/tree', {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+
+        console.log('Menu Tree:', menuTreeResponse.data.result.data);
+
+        const formattedMenuData = formatMenuData(menuTreeResponse.data.result.data);
+        setMenuData(formattedMenuData);
+      } catch (error) {
+        console.log('Error fetching data:', error.message);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  const formatMenuData = (data) => {
+    return data.map((item) => {
+      if (item.children && item.children.length > 0) {
+        return {
+          key: item.menuId,
+          label: item.item,
+          children: formatMenuData(item.children),
+        };
+      } else {
+        return {
+          key: item.menuId,
+          label: item.item,
+        };
+      }
+    });
+  };
+
   const toggleCollapsed = () => {
     setCollapsed(!collapsed);
   };
-  
+
   return (
     <div
       style={{
@@ -128,7 +81,7 @@ const App = () => {
         mode="inline"
         theme="dark"
         inlineCollapsed={collapsed}
-        items={items}
+        items={menuData}
       />
     </div>
   );
